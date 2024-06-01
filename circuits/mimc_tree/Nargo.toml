@@ -1,6 +1,6 @@
 [package]
 authors = [""]
 compiler_version = "0.29.0"
-name = "pedersen_tree"
+name = "mimc_tree"
 type = "bin"
 [dependencies]

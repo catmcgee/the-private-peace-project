@@ -1,4 +1,5 @@
-import { createCipheriv, createDecipheriv, randomBytes, createHash, publicEncrypt, privateDecrypt, generateKeyPairSync } from 'crypto';
+import { createCipheriv, createDecipheriv, randomBytes, createHash, publicEncrypt, privateDecrypt } from 'crypto';
+import { BigNumber } from "ethers";
 
 const algorithm = 'aes-256-cbc';
 const aesKeyLength = 32;  // 256 bits
@@ -47,21 +48,9 @@ export function decrypt(encryptedText: string, privateKey: string): string {
 export function generateHashPathInput(hash_path: string[]) {
   let hash_path_input = [];
   for (var i = 0; i < hash_path.length; i++) {
-    hash_path_input.push(`0x` + hash_path[i]);
+    hash_path_input.push(hash_path[i]);
   }
   return hash_path_input;
-}
-
-function hexStringToUint8Array(hexString: string): Uint8Array {
-  let cleanedHexString = hexString.startsWith('0x') ? hexString.slice(2) : hexString;
-  if (cleanedHexString.length % 2 !== 0) {
-      cleanedHexString = '0' + cleanedHexString;
-  }
-  const byteArray = new Uint8Array(cleanedHexString.length / 2);
-  for (let i = 0; i < byteArray.length; i++) {
-      byteArray[i] = parseInt(cleanedHexString.substr(i * 2, 2), 16);
-  }
-  return byteArray;
 }
 
 export function toHexString(byteArray: Uint8Array): string {
@@ -69,3 +58,46 @@ export function toHexString(byteArray: Uint8Array): string {
       return ('0' + (byte & 0xFF).toString(16)).slice(-2);
   }).join('');
 }
+
+
+const FIELD_MODULUS = BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+
+// Function to ensure hex strings have the "0x" prefix and are within field modulus
+export function ensureHexString(hexString: string) {
+  if (!hexString.startsWith("0x")) {
+      hexString = "0x" + hexString;
+  }
+  let bigNumberValue = BigNumber.from(hexString);
+  if (bigNumberValue.gte(FIELD_MODULUS)) {
+      bigNumberValue = bigNumberValue.mod(FIELD_MODULUS);
+  }
+  return bigNumberValue.toHexString();
+}
+
+// Function to convert decrypted proof inputs to the appropriate types
+export function convertDecryptedProofInputs(proofInputs: any) {
+    return {
+        ...proofInputs,
+        index: parseInt(proofInputs.index, 10),
+        note_hash_path: proofInputs.note_hash_path.map(ensureHexString),
+        secret: ensureHexString(proofInputs.secret),
+        nullifierHash: ensureHexString(proofInputs.nullifierHash)
+    };
+}
+
+// Function to validate proof inputs
+export function validateProofInputs(proofInputs: any) {
+    if (typeof proofInputs.index !== "number") {
+        throw new Error("Invalid index type, expected number.");
+    }
+    if (!Array.isArray(proofInputs.note_hash_path) || !proofInputs.note_hash_path.every(x => typeof x === 'string')) {
+        throw new Error("Invalid note_hash_path, expected array of hex strings.");
+    }
+    if (typeof proofInputs.secret !== "string") {
+        throw new Error("Invalid secret type, expected hex string.");
+    }
+    if (typeof proofInputs.nullifierHash !== "string") {
+        throw new Error("Invalid nullifierHash type, expected hex string.");
+    }
+};
+

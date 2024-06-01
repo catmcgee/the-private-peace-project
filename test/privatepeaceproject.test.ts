@@ -15,14 +15,14 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { deployVerifier, deployHasher, deployDepositAndWithdraw } from "./utils/deploy";
 import { Contract } from "ethers";
-import { generateHashPathInput, encrypt, decrypt} from "./utils/mimc";
+import { generateHashPathInput, encrypt, decrypt, convertDecryptedProofInputs,validateProofInputs } from "./utils/mimc";
 import { MerkleTreeMiMC } from "./utils/MerkleTree";
 import { buildMimc7 as buildMimc } from 'circomlibjs';
 import { Client, Conversation } from '@xmtp/xmtp-js';
 import { generateKeyPairSync } from 'crypto';
 import { Wallet } from 'ethers';
-
-
+import { generateProof} from './utils/noir'
+import { BigNumber } from "ethers";
 
 function toHexString(byteArray: Uint8Array): string {
     return '0x' + Array.from(byteArray, byte => {
@@ -47,6 +47,8 @@ describe("Private Peace Project Tests", function () {
   let tree: MerkleTreeMiMC;
   let proofInputs: ProofInputs;
   let encryptedProofInputs: string;
+  let decryptedReceivedProofInputs: any;
+  let proof: any;
 
   const nullifier = ethers.utils.randomBytes(32);
   const secret = ethers.utils.randomBytes(32);
@@ -56,7 +58,7 @@ describe("Private Peace Project Tests", function () {
       verifier = await deployVerifier();
       hasher = await deployHasher();
       const amount = ethers.utils.parseEther("0.01");
-      const merkleTreeHeight = 30;
+      const merkleTreeHeight = 3;
       depositAndWithdraw = await deployDepositAndWithdraw(verifier.address, hasher.address, amount, merkleTreeHeight);
 
       // Get accounts
@@ -129,11 +131,11 @@ describe("Private Peace Project Tests", function () {
 
       proofInputs = {
           recipient: accounts[0].address,
-          note_root: `0x` + note_root,
+          note_root: note_root,
           index: index,
           note_hash_path: generateHashPathInput(note_hash_path),
-          secret: `0x` + Buffer.from(secret).toString('hex'),
-          nullifierHash: `0x` + Buffer.from(nullifier).toString('hex'),
+          secret: '0x' + Buffer.from(secret).toString('hex'),
+          nullifierHash: '0x' + Buffer.from(nullifier).toString('hex'),
       };
   });
 
@@ -211,11 +213,48 @@ describe("Private Peace Project Tests", function () {
       }
 
       const decryptedReceivedProofInputsJson = decrypt(lastMessage, recipientPrivateKeyPem);
-      const decryptedReceivedProofInputs = JSON.parse(decryptedReceivedProofInputsJson);
+      decryptedReceivedProofInputs = JSON.parse(decryptedReceivedProofInputsJson);
 
       console.log("Decrypted Received Proof Inputs:", decryptedReceivedProofInputs);
 
       expect(decryptedReceivedProofInputs).to.deep.equal(proofInputs);
 
     });
+
+
+    it("Should withdraw with proof with decrypted received proof inputs", async function () {
+     // Convert the decrypted proof inputs to the appropriate types
+    const convertedProofInputs = convertDecryptedProofInputs(decryptedReceivedProofInputs);
+
+    // Validate the proof inputs
+    validateProofInputs(convertedProofInputs);
+
+    // Log the proof inputs for debugging
+    console.log("Converted Proof Inputs:", convertedProofInputs);
+
+
+    // Recreate note_commitment and nullifier using the same logic as in the circuit
+    const mimc = await buildMimc();
+    const recipient = convertedProofInputs.recipient;
+    const secret = BigNumber.from(convertedProofInputs.secret).toHexString();
+    const note_commitment = mimc.multiHash([recipient, secret]);
+    const index = convertedProofInputs.index;
+    const nullifier = mimc.multiHash([note_commitment, index, recipient]);
+
+    console.log("Expected note_commitment:", note_commitment);
+    console.log("Expected nullifier:", nullifier);
+    console.log("Provided nullifierHash:", convertedProofInputs.nullifierHash);
+
+    // Check if the values match
+    if (BigNumber.from(nullifier).toHexString() !== convertedProofInputs.nullifierHash) {
+        throw new Error("Generated nullifier does not match provided nullifierHash");
+    }
+
+    try {
+        proof = await generateProof(convertedProofInputs);
+        console.log("Generated Proof:", proof);
+    } catch (error) {
+        console.error("Failed to generate proof:", error);
+    }
+  });
 });

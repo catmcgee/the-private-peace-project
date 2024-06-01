@@ -1,5 +1,5 @@
 {
-    "compilerOptions": {
+  "compilerOptions": {
       "target": "es2020",
       "module": "commonjs",
       "esModuleInterop": true,
@@ -7,8 +7,9 @@
       "strict": true,
       "skipLibCheck": true,
       "moduleResolution": "node",
-    },
-    "include": ["./test", "./utils"],
-    "files": ["./hardhat.config.ts"]
-  }
-  
+      "resolveJsonModule": true,  // Add this line
+      "allowSyntheticDefaultImports": true  // Add this line
+  },
+  "include": ["./test", "./utils"],
+  "files": ["./hardhat.config.ts"]
+}

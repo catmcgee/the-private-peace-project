@@ -15,10 +15,10 @@ fn main(
   nullifierHash: pub Field, 
 ) -> pub Field {
     
-    let note_commitment = std::hash::pedersen_hash([recipient, secret]);
+    let note_commitment = std::hash::mimc::mimc_bn254([recipient, secret]);
     
     // Compute input note nullifier
-    let nullifier = std::hash::pedersen_hash([note_commitment, index, recipient]);
+    let nullifier = std::hash::mimc::mimc_bn254([note_commitment, index, recipient]);
     assert(nullifierHash == nullifier);
 
     // Check that the input note commitment is in the root
