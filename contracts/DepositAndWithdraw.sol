@@ -58,6 +58,7 @@ contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
         commitments[_commitment] = true;
 
         require(msg.value == amount, "Please send `mixAmount` ETH along with transaction");
+        console.log("inserted index", insertedIndex);
 
         emit Deposit(_commitment, insertedIndex, block.timestamp);
     }

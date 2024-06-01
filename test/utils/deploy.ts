@@ -4,10 +4,6 @@ import { execSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 
-async function generateHasherArtifact() {
-  execSync('node ./generateHasher.js', { stdio: 'inherit' });
-}
-
 export async function deployVerifier(): Promise<Contract> {
   const Verifier = await ethers.getContractFactory("UltraVerifier");
   const verifier = await Verifier.deploy();
@@ -17,7 +13,6 @@ export async function deployVerifier(): Promise<Contract> {
 }
 
 export async function deployHasher(): Promise<Contract> {
-  await generateHasherArtifact(); // Generate the Hasher artifact before deployment
 
   const [deployer] = await ethers.getSigners();
   const hasherArtifactPath = path.join(__dirname, '../../artifacts/contracts/Hasher.json');

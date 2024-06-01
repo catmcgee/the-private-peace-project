@@ -10,7 +10,7 @@ function toUint8Array(inputs: any[]): Uint8Array {
 
 export async function mimcHash(nullifier: Uint8Array, secret: Uint8Array): Promise<string> {
     const mimc = await buildMimc7();
-    const hash = mimc.multiHash([nullifier, secret]);
+    const hash = mimc.hash(nullifier, secret);
     return mimc.F.toString(hash, 16).padStart(64, '0');
 }
 
