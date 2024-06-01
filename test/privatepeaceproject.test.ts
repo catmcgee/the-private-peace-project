@@ -18,8 +18,10 @@ import { Contract } from "ethers";
 import { generateHashPathInput, encrypt, decrypt} from "./utils/mimc";
 import { MerkleTreeMiMC } from "./utils/MerkleTree";
 import { buildMimc7 as buildMimc } from 'circomlibjs';
-import { Client } from '@xmtp/xmtp-js';
+import { Client, Conversation } from '@xmtp/xmtp-js';
 import { generateKeyPairSync } from 'crypto';
+import { Wallet } from 'ethers';
+
 
 
 function toHexString(byteArray: Uint8Array): string {
@@ -135,12 +137,14 @@ describe("Private Peace Project Tests", function () {
       };
   });
 
-  it("Should send and receive encrypted proofInputs over XMTP", async function () {
+  it("Should send and receive encrypted proofInputs over XMTP and be able to decrypt", async function () {
     const proofInputsJson = JSON.stringify(proofInputs);
 
     const { publicKey: recipientPublicKey, privateKey: recipientPrivateKey } = generateKeyPairSync('rsa', {
         modulusLength: 2048,
-    });
+    }); // when implementing it you should use recipientPublicKey that is in the proofinputs to encrypt
+    // and the recipient's private key to decrypt
+    // dont need to make this new account
 
     const recipientPublicKeyPem = recipientPublicKey.export({ type: 'pkcs1', format: 'pem' }) as string;
     const recipientPrivateKeyPem = recipientPrivateKey.export({ type: 'pkcs1', format: 'pem' }) as string;
@@ -149,58 +153,69 @@ describe("Private Peace Project Tests", function () {
     const encryptedProofInputs = encrypt(proofInputsJson, recipientPublicKeyPem);
     console.log("Encrypted Proof Inputs:", encryptedProofInputs);
 
-    // XMTP Part
-    const walletA = accounts[0]; // receiver
-    const walletB = accounts[2]; // the protocol account
+          // XMTP Part
+    const walletA: Wallet = accounts[0]; // receiver
+    const walletB: Wallet = accounts[2]; // the protocol account
 
     // Initialize XMTP clients
-    const xmtpClientA = await Client.create(walletA);
-    const xmtpClientB = await Client.create(walletB);
+    const xmtpClientA: Client = await Client.create(walletA);
+    const xmtpClientB: Client = await Client.create(walletB);
 
     // Ensure that both clients are properly authenticated
     if (!xmtpClientA || !xmtpClientB) {
         throw new Error("Failed to initialize XMTP clients");
     }
 
-        // Start a conversation initiated by walletB to walletA
-    const conversation = await xmtpClientA.conversations.newConversation(walletB.address);
+    // Initialize conversation from A to B
+    let conversation: Conversation;
+    const conversationsA: Conversation[] = await xmtpClientA.conversations.list();
+    const existingConversation: Conversation | undefined = conversationsA.find(conv => conv.peerAddress === walletB.address);
 
-    // Send the encrypted proof inputs from walletB to walletA
+    if (existingConversation) {
+        conversation = existingConversation;
+    } else {
+        conversation = await xmtpClientA.conversations.newConversation(walletB.address);
+    }
+
+    // Assuming encryptedProofInputs is a string or a Buffer
     await conversation.send(encryptedProofInputs);
 
     console.log(`Message sent from ${walletB.address} to ${walletA.address}`);
 
-
     // Wait for a moment to ensure the message is sent and received
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 10000)); // Increase to 10 seconds
 
-    // Receive the encrypted proof inputs
-    const conversations = await xmtpClientB.conversations.list();
-    console.log("conversations", conversations) 
-    // idk how to make this part work but it shouldnt be this hard and im tired and need to move onto next thing
-  
-    // const conversationB = conversations.find(conv => conv.peerAddress === walletA.address);
+    // Function to refetch conversations and messages
+    const refetchMessages = async (client: Client, walletAddress: string): Promise<string[]> => {
+        const conversations: Conversation[] = await client.conversations.list();
+        const conversation: Conversation | undefined = conversations.find(conv => conv.peerAddress === walletAddress);
 
-    // if (!conversationB) {
-    //     throw new Error("Conversation not found");
-    // }
+        if (!conversation) {
+            throw new Error("Conversation not found");
+        }
 
-    // const messages = await conversationB.messages();
-    // if (!messages || messages.length === 0) {
-    //     throw new Error("No messages found in conversation");
-    // }
+        const messages = await conversation.messages();
+        return messages.map(msg => msg.content);
+    };
 
-    // const lastMessage = messages[messages.length - 1].content;
-    // if (!lastMessage) {
-    //     throw new Error("Last message is undefined");
-    // }
+      // Receive the encrypted proof inputs
+      const messages: string[] = await refetchMessages(xmtpClientB, walletA.address);
 
-    // const decryptedReceivedProofInputsJson = decrypt(lastMessage, recipientPrivateKeyPem);
-    // const decryptedReceivedProofInputs = JSON.parse(decryptedReceivedProofInputsJson);
+      if (!messages || messages.length === 0) {
+          throw new Error("No messages found in conversation");
+      }
 
-    // console.log("Decrypted Received Proof Inputs:", decryptedReceivedProofInputs);
+      const lastMessage = messages[messages.length - 1];
+      if (!lastMessage) {
+          throw new Error("Last message is undefined");
+      }
 
-    // expect(decryptedReceivedProofInputs).to.deep.equal(proofInputs);
-});
+      const decryptedReceivedProofInputsJson = decrypt(lastMessage, recipientPrivateKeyPem);
+      const decryptedReceivedProofInputs = JSON.parse(decryptedReceivedProofInputsJson);
 
+      console.log("Decrypted Received Proof Inputs:", decryptedReceivedProofInputs);
+
+      expect(decryptedReceivedProofInputs).to.deep.equal(proofInputs);
+
+    });
 });
