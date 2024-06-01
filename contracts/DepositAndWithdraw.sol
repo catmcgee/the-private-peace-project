@@ -98,11 +98,11 @@ contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
         emit Withdrawal(_recipient, _nullifierHash);
     }
 
-    function addAddress(bool receiverType) external {
+    function addAddress(bool receiverType, address receiver) external {
         if (receiverType) {
-            palestinianAddresses.push(msg.sender);
+            palestinianAddresses.push(receiver);
         } else {
-            ukrainianAddresses.push(msg.sender);
+            ukrainianAddresses.push(receiver);
         }
     }
 
