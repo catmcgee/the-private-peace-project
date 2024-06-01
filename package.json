@@ -48,8 +48,10 @@
     "@openzeppelin/contracts": "^4.7.1",
     "@typechain/ethers-v5": "^10.1.0",
     "@types/circomlibjs": "^0.1.6",
+    "@xmtp/xmtp-js": "^11.6.2",
     "bigint-buffer": "^1.1.5",
     "circomlib": "^2.0.5",
-    "circomlibjs": "^0.1.7"
+    "circomlibjs": "^0.1.7",
+    "crypto": "^1.0.1"
   }
 }

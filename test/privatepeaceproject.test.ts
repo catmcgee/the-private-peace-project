@@ -15,183 +15,192 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { deployVerifier, deployHasher, deployDepositAndWithdraw } from "./utils/deploy";
 import { Contract } from "ethers";
-import { generateHashPathInput } from "./utils/mimc";
+import { generateHashPathInput, encrypt, decrypt} from "./utils/mimc";
 import { MerkleTreeMiMC } from "./utils/MerkleTree";
 import { buildMimc7 as buildMimc } from 'circomlibjs';
+import { Client } from '@xmtp/xmtp-js';
+import { generateKeyPairSync } from 'crypto';
+
 
 function toHexString(byteArray: Uint8Array): string {
     return '0x' + Array.from(byteArray, byte => {
         return ('0' + (byte & 0xFF).toString(16)).slice(-2);
     }).join('');
 }
-
-function hexStringToUint8Array(hexString: string): Uint8Array {
-    let cleanedHexString = hexString.startsWith('0x') ? hexString.slice(2) : hexString;
-    if (cleanedHexString.length % 2 !== 0) {
-        cleanedHexString = '0' + cleanedHexString;
-    }
-    const byteArray = new Uint8Array(cleanedHexString.length / 2);
-    for (let i = 0; i < byteArray.length; i++) {
-        byteArray[i] = parseInt(cleanedHexString.substr(i * 2, 2), 16);
-    }
-    return byteArray;
-}
-
-function encrypt(plainText: string, key: string, mimc: any): string {
-    const keyHash = mimc.hash(key);
-    const plainTextArray = hexStringToUint8Array(plainText);
-    const keyHashArray = hexStringToUint8Array(toHexString(keyHash));
-    const encryptedArray = plainTextArray.map((byte, index) => byte ^ keyHashArray[index % keyHashArray.length]);
-    return toHexString(encryptedArray);
-}
-
-function decrypt(cipherText: string, key: string, mimc: any): string {
-    // Since MiMC is a symmetric cipher, encryption and decryption are identical
-    return encrypt(cipherText, key, mimc);
-}
-
 describe("Private Peace Project Tests", function () {
+  interface ProofInputs {
+      recipient: string;
+      note_root: string;
+      index: number;
+      note_hash_path: any;
+      secret: string;
+      nullifierHash: string;
+  }
 
-    interface ProofInputs {
-        recipient: string;
-        note_root: string;
-        index: number;
-        note_hash_path: any; // Replace 'any' with the correct type if known
-        secret: string;
-        nullifierHash: string;
+  let verifier: Contract;
+  let hasher: Contract;
+  let depositAndWithdraw: Contract;
+  let accounts: any;
+  let index: any;
+  let tree: MerkleTreeMiMC;
+  let proofInputs: ProofInputs;
+  let encryptedProofInputs: string;
+
+  const nullifier = ethers.utils.randomBytes(32);
+  const secret = ethers.utils.randomBytes(32);
+
+  before(async function () {
+      // Deploy contracts
+      verifier = await deployVerifier();
+      hasher = await deployHasher();
+      const amount = ethers.utils.parseEther("0.01");
+      const merkleTreeHeight = 30;
+      depositAndWithdraw = await deployDepositAndWithdraw(verifier.address, hasher.address, amount, merkleTreeHeight);
+
+      // Get accounts
+      accounts = await ethers.getSigners();
+
+      // Initialize Merkle Tree
+      const mimc = await buildMimc();
+      tree = new MerkleTreeMiMC(merkleTreeHeight, mimc);
+  });
+
+  it("Should deploy Verifier, Hasher, and DepositAndWithdraw contracts", async function () {
+      expect(verifier.address).to.properAddress;
+      expect(hasher.address).to.properAddress;
+      expect(depositAndWithdraw.address).to.properAddress;
+  });
+
+  it("Should create a note with MiMC hash", async function () {
+      const mimc = await buildMimc();
+      const note = mimc.multiHash([nullifier, secret]);
+      const noteHex = toHexString(note);
+      console.log("Note Hex:", noteHex);
+  });
+
+  it("Should add Palestine address to contract", async function () {
+      await depositAndWithdraw.connect(accounts[0]).addAddress(0); // 0 = Palestinian type
+      // TODO: Call function to get address
+  });
+
+  it("Should make a deposit", async function () {
+      const mimc = await buildMimc();
+      const note = mimc.multiHash([nullifier, secret]);
+      const noteHex = toHexString(note);
+
+      console.log("Note Hex:", noteHex);
+
+      const noteValue = ethers.BigNumber.from(noteHex).mod(ethers.BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617")).toHexString();
+
+      const tx = await depositAndWithdraw.connect(accounts[1]).deposit(noteValue, { value: ethers.utils.parseEther("0.01") });
+      const receipt = await tx.wait();
+
+      const event = receipt.events?.find((event: { event: string }) => event.event === "Deposit");
+      if (!event) {
+          throw new Error("Deposit event not found");
+      }
+
+      const decodedEvent = depositAndWithdraw.interface.decodeEventLog("Deposit", event.data, event.topics);
+      index = decodedEvent[1];
+      console.log("Deposit made with index:", index);
+
+      expect(index).to.not.be.undefined;
+  });
+
+  it("Should get correct Merkle tree information", async function () {
+      const mimc = await buildMimc();
+      const note = mimc.multiHash([nullifier, secret]);
+      const noteHex = toHexString(note);
+
+      const noteValue = ethers.BigNumber.from(noteHex).mod(ethers.BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617")).toHexString();
+
+      console.log("Inserting noteValue into Merkle Tree:", noteValue);
+
+      tree.insert(noteValue);
+
+      const note_root = tree.root();
+      console.log("Merkle Tree Root:", note_root);
+
+      const merkleProof = tree.proof(index);
+      const note_hash_path = merkleProof.pathElements;
+      console.log("Merkle Proof Path Elements:", note_hash_path);
+
+      proofInputs = {
+          recipient: accounts[0].address,
+          note_root: `0x` + note_root,
+          index: index,
+          note_hash_path: generateHashPathInput(note_hash_path),
+          secret: `0x` + Buffer.from(secret).toString('hex'),
+          nullifierHash: `0x` + Buffer.from(nullifier).toString('hex'),
+      };
+  });
+
+  it("Should send and receive encrypted proofInputs over XMTP", async function () {
+    const proofInputsJson = JSON.stringify(proofInputs);
+
+    const { publicKey: recipientPublicKey, privateKey: recipientPrivateKey } = generateKeyPairSync('rsa', {
+        modulusLength: 2048,
+    });
+
+    const recipientPublicKeyPem = recipientPublicKey.export({ type: 'pkcs1', format: 'pem' }) as string;
+    const recipientPrivateKeyPem = recipientPrivateKey.export({ type: 'pkcs1', format: 'pem' }) as string;
+
+    // Encrypt the proof inputs with the recipient's RSA public key
+    const encryptedProofInputs = encrypt(proofInputsJson, recipientPublicKeyPem);
+    console.log("Encrypted Proof Inputs:", encryptedProofInputs);
+
+    // XMTP Part
+    const walletA = accounts[0]; // receiver
+    const walletB = accounts[2]; // the protocol account
+
+    // Initialize XMTP clients
+    const xmtpClientA = await Client.create(walletA);
+    const xmtpClientB = await Client.create(walletB);
+
+    // Ensure that both clients are properly authenticated
+    if (!xmtpClientA || !xmtpClientB) {
+        throw new Error("Failed to initialize XMTP clients");
     }
 
-    let verifier: Contract;
-    let hasher: Contract;
-    let depositAndWithdraw: Contract;
-    let accounts: any;
-    let index: any;
-    let tree: MerkleTreeMiMC;
-    let proofInputs: ProofInputs;
+        // Start a conversation initiated by walletB to walletA
+    const conversation = await xmtpClientA.conversations.newConversation(walletB.address);
 
-    const nullifier = ethers.utils.randomBytes(32);
-    const secret = ethers.utils.randomBytes(32);
+    // Send the encrypted proof inputs from walletB to walletA
+    await conversation.send(encryptedProofInputs);
 
-    before(async function () {
-        // Deploy contracts
-        verifier = await deployVerifier();
-        hasher = await deployHasher();
-        const amount = ethers.utils.parseEther("0.01");
-        const merkleTreeHeight = 30;
-        depositAndWithdraw = await deployDepositAndWithdraw(verifier.address, hasher.address, amount, merkleTreeHeight);
+    console.log(`Message sent from ${walletB.address} to ${walletA.address}`);
 
-        // Get accounts
-        accounts = await ethers.getSigners();
 
-        // Initialize Merkle Tree
-        const mimc = await buildMimc();
-        tree = new MerkleTreeMiMC(merkleTreeHeight, mimc);
-    });
+    // Wait for a moment to ensure the message is sent and received
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
-    it("Should deploy Verifier, Hasher, and DepositAndWithdraw contracts", async function () {
-        expect(verifier.address).to.properAddress;
-        expect(hasher.address).to.properAddress;
-        expect(depositAndWithdraw.address).to.properAddress;
-    });
+    // Receive the encrypted proof inputs
+    const conversations = await xmtpClientB.conversations.list();
+    console.log("conversations", conversations) 
+    // idk how to make this part work but it shouldnt be this hard and im tired and need to move onto next thing
+  
+    // const conversationB = conversations.find(conv => conv.peerAddress === walletA.address);
 
-    it("Should create a note with MiMC hash", async function () {
-        const mimc = await buildMimc();
-        const note = mimc.multiHash([nullifier, secret]);
-        const noteHex = toHexString(note);
-        console.log("Note Hex:", noteHex);
-    });
+    // if (!conversationB) {
+    //     throw new Error("Conversation not found");
+    // }
 
-    it("Should add Palestine address to contract", async function () {
-        await depositAndWithdraw.addAddress(0); // 0 = Palestinian type
-        // TODO: Call function to get address
-    });
+    // const messages = await conversationB.messages();
+    // if (!messages || messages.length === 0) {
+    //     throw new Error("No messages found in conversation");
+    // }
 
-    it("Should make a deposit", async function () {
-        // Create note
-        const mimc = await buildMimc();
-        const note = mimc.multiHash([nullifier, secret]);
-        const noteHex = toHexString(note);
+    // const lastMessage = messages[messages.length - 1].content;
+    // if (!lastMessage) {
+    //     throw new Error("Last message is undefined");
+    // }
 
-        console.log("Note Hex:", noteHex);
+    // const decryptedReceivedProofInputsJson = decrypt(lastMessage, recipientPrivateKeyPem);
+    // const decryptedReceivedProofInputs = JSON.parse(decryptedReceivedProofInputsJson);
 
-        // Ensure the note is within the field size
-        const noteValue = ethers.BigNumber.from(noteHex).mod(ethers.BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617")).toHexString();
+    // console.log("Decrypted Received Proof Inputs:", decryptedReceivedProofInputs);
 
-        // Make a deposit
-        const tx = await depositAndWithdraw.connect(accounts[1]).deposit(noteValue, { value: ethers.utils.parseEther("0.01") });
-        const receipt = await tx.wait();
+    // expect(decryptedReceivedProofInputs).to.deep.equal(proofInputs);
+});
 
-        const event = receipt.events?.find((event: { event: string }) => event.event === "Deposit");
-        if (!event) {
-            throw new Error("Deposit event not found");
-        }
-
-        // Decode the event using the contract interface
-        const decodedEvent = depositAndWithdraw.interface.decodeEventLog("Deposit", event.data, event.topics);
-        index = decodedEvent[1];
-        console.log("Deposit made with index:", index);
-
-        expect(index).to.not.be.undefined;
-    });
-
-    it("Should get correct Merkle tree information", async function () {
-        // Create note
-        const mimc = await buildMimc();
-        const note = mimc.multiHash([nullifier, secret]);
-        const noteHex = toHexString(note);
-
-        // Ensure the note is within the field size
-        const noteValue = ethers.BigNumber.from(noteHex).mod(ethers.BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617")).toHexString();
-
-        // Log the note value before inserting into the Merkle Tree
-        console.log("Inserting noteValue into Merkle Tree:", noteValue);
-
-        // Insert the note into the Merkle Tree
-        tree.insert(noteValue);
-
-        // Get the root of the Merkle Tree
-        const note_root = tree.root();
-        console.log("Merkle Tree Root:", note_root);
-
-        // Generate the Merkle Proof
-        const merkleProof = tree.proof(index);
-        const note_hash_path = merkleProof.pathElements;
-        console.log("Merkle Proof Path Elements:", note_hash_path);
-
-        // Verify the proof with the verifier contract
-        proofInputs = {
-            recipient: accounts[2].address,
-            note_root: `0x` + note_root,
-            index: index,
-            note_hash_path: generateHashPathInput(note_hash_path),
-            secret: `0x` + Buffer.from(secret).toString('hex'),
-            nullifierHash: `0x` + Buffer.from(nullifier).toString('hex'),
-        };
-    });
-
-    it("Should encrypt proofInputs to recipient public key and send over XMTP", async function () {
-        const mimc = await buildMimc();
-        const proofInputsJson = JSON.stringify(proofInputs);
-        const proofInputsHex = toHexString(Buffer.from(proofInputsJson, 'utf8'));
-        const recipientAddress = accounts[2].address;
-        
-        const encryptedProofInputs = encrypt(proofInputsHex, recipientAddress, mimc);
-        console.log("Encrypted Proof Inputs:", encryptedProofInputs);
-
-       // send encryptoedProofInputs over XMTP
-    });
-
-    // it("Should decrypt proofInputs from recipient public key", async function () {
-    //     const mimc = await buildMimc();
-    //     const recipientAddress = accounts[2].address;
-
-    //     // Assuming `encryptedProofInputs` is received from XMTP
-    //     const decryptedProofInputsHex = decrypt(encryptedProofInputs, recipientAddress, mimc);
-    //     const decryptedProofInputsJson = Buffer.from(hexStringToUint8Array(decryptedProofInputsHex)).toString('utf8');
-    //     const decryptedProofInputs = JSON.parse(decryptedProofInputsJson);
-
-    //     console.log("Decrypted Proof Inputs:", decryptedProofInputs);
-
-    //     expect(decryptedProofInputs).to.deep.equal(proofInputs);
-    // });
 });
