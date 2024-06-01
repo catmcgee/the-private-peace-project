@@ -34,7 +34,7 @@
     "hardhat-gas-reporter": "^1.0.8",
     "snarkjs": "^0.4.24",
     "solidity-coverage": "^0.7.21",
-    "ts-node": "^10.9.1",
+    "ts-node": "^10.9.2",
     "typechain": "^8.1.0",
     "typescript": "^4.7.4",
     "zkp-merkle-airdrop-lib": "^1.0.5"
@@ -44,9 +44,12 @@
     "@noir-lang/barretenberg": "github:noir-lang/barretenberg#39a1547875f941ef6640217a42d8f34972425c97",
     "@noir-lang/noir-source-resolver": "^1.0.0",
     "@noir-lang/noir_wasm": "github:noir-lang/noir_wasm#344738adc66965fa20b0bb0c13a83ac5ceedf486",
+    "@nomicfoundation/hardhat-ignition": "^0.15.4",
     "@openzeppelin/contracts": "^4.7.1",
     "@typechain/ethers-v5": "^10.1.0",
+    "@types/circomlibjs": "^0.1.6",
     "bigint-buffer": "^1.1.5",
+    "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.7"
   }
 }

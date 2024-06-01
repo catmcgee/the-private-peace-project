@@ -14,6 +14,8 @@ contract MerkleTreeWithHistory {
   IHasher public immutable hasher;
 
   uint32 public levels;
+  event DebugHashLeftRight(bytes32 left, bytes32 right);
+
 
   // the following variables are made public for easier testing and debugging and
   // are not supposed to be accessed in regular code
@@ -49,6 +51,8 @@ contract MerkleTreeWithHistory {
   ) public pure returns (bytes32) {
     require(uint256(_left) < FIELD_SIZE, "_left should be inside the field");
     require(uint256(_right) < FIELD_SIZE, "_right should be inside the field");
+
+    emit DebugHashLeftRight(_left, _right);
 
     uint256 R = 0;
     uint256 hash_left = _hasher.MiMCpe7(uint256(_left), R);

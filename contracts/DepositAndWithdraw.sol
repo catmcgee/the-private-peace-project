@@ -10,7 +10,7 @@ interface IVerifier {
     function verify(bytes calldata) external view returns (bool);
 }
 
-contract PrivateTransfer is MerkleTreeWithHistory, ReentrancyGuard {
+contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
     IVerifier public verifier;
     // uint256 public denomination;
 
@@ -22,6 +22,9 @@ contract PrivateTransfer is MerkleTreeWithHistory, ReentrancyGuard {
     mapping(bytes32 => bool) public nullifierHashes;
     // we store all commitments just to prevent accidental deposits with the same commitment
     mapping(bytes32 => bool) public commitments;
+
+    address[] public palestinianAddresses;
+    address[] public ukrainianAddresses;
 
     event Deposit(bytes32 indexed commitments, uint32 leafIndex, uint256 timestamp);
     event Withdrawal(address to, bytes32 nullifierHashes);
@@ -63,9 +66,6 @@ contract PrivateTransfer is MerkleTreeWithHistory, ReentrancyGuard {
         @dev Withdraw a deposit from the contract. `proof` is a zkSNARK proof data, and input is an array of circuit public inputs
         `input` array consists of:
         - merkle root of all deposits in the contract
-        - hash of unique deposit nullifier to prevent double spends
-        - the recipient of funds
-        - optional fee that goes to the transaction sender (usually a relay)
     */
     function withdraw(
         bytes calldata proof,
@@ -87,6 +87,7 @@ contract PrivateTransfer is MerkleTreeWithHistory, ReentrancyGuard {
 
         // Set nullifier hash to true
         nullifierHashes[_nullifierHash] = true;
+        deleteAddress(_recipient);
 
         require(msg.value == 0, "msg.value is supposed to be zero");
 
@@ -95,4 +96,56 @@ contract PrivateTransfer is MerkleTreeWithHistory, ReentrancyGuard {
 
         emit Withdrawal(_recipient, _nullifierHash);
     }
+
+    function addAddress(bool receiverType) external {
+        if (receiverType) {
+            palestinianAddresses.push(msg.sender);
+        } else {
+            ukrainianAddresses.push(msg.sender);
+        }
+    }
+
+    function getAddress(bool receiverType) external view returns (address) {
+        if (receiverType) {
+            return palestinianAddresses[0];
+        } else {
+            return ukrainianAddresses[0];
+        }
+    }
+
+    function getAddressCount(bool receiverType) external view returns (uint256) {
+        if (receiverType) {
+            return palestinianAddresses.length;
+        } else {
+            return ukrainianAddresses.length;
+        }
+    }
+
+// this is very bad and gas inefficient
+     function deleteAddress(address _address) public {
+        bool found = false;
+
+        for (uint i = 0; i < palestinianAddresses.length; i++) {
+            if (palestinianAddresses[i] == _address) {
+                for (uint j = i; j < palestinianAddresses.length - 1; j++) {
+                    palestinianAddresses[j] = palestinianAddresses[j + 1];
+                }
+                palestinianAddresses.pop();
+                found = true;
+                break; 
+            }
+        }
+        if (!found) {
+            for (uint i = 0; i < ukrainianAddresses.length; i++) {
+                if (ukrainianAddresses[i] == _address) {
+                    for (uint j = i; j < ukrainianAddresses.length - 1; j++) {
+                        ukrainianAddresses[j] = ukrainianAddresses[j + 1];
+                    }
+                    ukrainianAddresses.pop();
+                    break; 
+                }
+            }
+        }
+    }
 }
+
