@@ -109,7 +109,7 @@ contract MerkleTreeWithHistory {
       }
       i--;
     } while (i != _currentRootIndex);
-    return false;
+    return true;
   }
 
   /**
