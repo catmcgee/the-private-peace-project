@@ -6,8 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { MetaMaskContext } from "../MetaMaskContext";
 import { Contract, utils, BigNumber, providers } from "ethers";
-import { PPP_ABI, PPP_CONTRACT_ADDRESS } from "../../constants";
+import { PPP_ABI } from "../../constants";
 import { buildMimc7 as buildMimc } from 'circomlibjs';
+
 
 export interface ISendToPoolProps {
     poolType: LiquidityPool
@@ -34,15 +35,15 @@ const deposit = async (metamask: string, onOpen: () => void) => {
 
     const noteValue = BigNumber.from(noteHex).mod(BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617")).toHexString();
     const provider = window.ethereum;
+
     const iface = new utils.Interface(PPP_ABI);
     const functionData = iface.encodeFunctionData("deposit", [noteValue])
-
+    
     if (provider)
         await provider.request({
             method: "eth_sendTransaction",
             params: [
                 {
-                    // TODO replace "from" with connected metamask address
                     from: metamask,
                     to: "0xc127cC043AF2c160c84e7eF26a3113F4f4283639",
                     value: "0x2386F26FC10000", // 0.01 
@@ -50,6 +51,7 @@ const deposit = async (metamask: string, onOpen: () => void) => {
                 },
             ]
         })
+
     onOpen();
 };
 

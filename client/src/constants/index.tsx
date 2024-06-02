@@ -7,6 +7,11 @@ export const PPP_ABI = [
         "type": "address"
       },
       {
+        "internalType": "contract IVerifier",
+        "name": "_palestinianVerifier",
+        "type": "address"
+      },
+      {
         "internalType": "contract IHasher",
         "name": "_hasher",
         "type": "address"
@@ -119,6 +124,11 @@ export const PPP_ABI = [
         "internalType": "address",
         "name": "receiver",
         "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "proof",
+        "type": "bytes"
       }
     ],
     "name": "addAddress",
@@ -394,6 +404,19 @@ export const PPP_ABI = [
   },
   {
     "inputs": [],
+    "name": "palestinianVerifier",
+    "outputs": [
+      {
+        "internalType": "contract IVerifier",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
     "name": "root",
     "outputs": [
       {
@@ -494,4 +517,3 @@ export const PPP_ABI = [
     "type": "function"
   }
 ]
-export const PPP_CONTRACT_ADDRESS = "0xF517D40DBF875B3084b96713d993E7C62543CeeC"
