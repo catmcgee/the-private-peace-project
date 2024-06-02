@@ -108,8 +108,8 @@ You should see some console logging and successful testing.
 
 On Ethereum Sepolia network, the contracts are deployed at these addresses:
 
-Mimc merkle tree verifier deployed at [0x6892c87002e116AEC1ea8C76a792DCF112d3b93c](https://sepolia.etherscan.io/address/0x6892c87002e116AEC1ea8C76a792DCF112d3b93c)
-Palestine verifier deployed at [0x4aE653259b7fBBb2C666d77CbD6279fC3534d966](https://sepolia.etherscan.io/address/0x4aE653259b7fBBb2C666d77CbD6279fC3534d966)
-Hasher deployed at [0x0DF19cdd7634DA980033De3B5c083093595A2384](https://sepolia.etherscan.io/address/0x0DF19cdd7634DA980033De3B5c083093595A2384)
-DepositAndWithdraw deployed at [0x58D2D174483ac0b236116BD381BBcC3A5d83b457](https://sepolia.etherscan.io/address/0x58D2D174483ac0b236116BD381BBcC3A5d83b457)
+- Mimc merkle tree verifier deployed at [0x6892c87002e116AEC1ea8C76a792DCF112d3b93c](https://sepolia.etherscan.io/address/0x6892c87002e116AEC1ea8C76a792DCF112d3b93c)
+- Palestine verifier deployed at [0x4aE653259b7fBBb2C666d77CbD6279fC3534d966](https://sepolia.etherscan.io/address/0x4aE653259b7fBBb2C666d77CbD6279fC3534d966)
+- Hasher deployed at [0x0DF19cdd7634DA980033De3B5c083093595A2384](https://sepolia.etherscan.io/address/0x0DF19cdd7634DA980033De3B5c083093595A2384)
+- DepositAndWithdraw deployed at [0x58D2D174483ac0b236116BD381BBcC3A5d83b457](https://sepolia.etherscan.io/address/0x58D2D174483ac0b236116BD381BBcC3A5d83b457)
 
