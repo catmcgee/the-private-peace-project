@@ -33,18 +33,18 @@ export default function SelectionPage() {
                 <CentreDiv style={{ width: '100%', borderBottom: '1px solid white', marginTop:'20px'}}>
                     <HeaderText style={{  marginTop: '10px' }}>Funder</HeaderText>
                 </CentreDiv>
-                <HeaderText style={{ textAlign: 'center', marginTop: '40px' }}>A founder is able to donate money to the people that really need it. You can rest assured that whenever you want to donate that the person receiving those funds are in need.</HeaderText>
+                <HeaderText style={{ textAlign: 'center', marginTop: '40px' }}>A funder is able to donate money to the people that really need it. You can rest assured that whenever you want to donate, the person receiving those funds are in need.</HeaderText>
                 <CentreDiv style={{ marginTop: '120px' }}>
                     <Button style={{ width: '200px', height: '200px' }} onClick={() => moveToPage('funding')} isIconOnly color="secondary" aria-label="Like">
                         <Image style={{ marginTop: '30px' }} src={donate} alt="logo" />
                     </Button>
                 </CentreDiv>
             </SidePanel>
-            <SidePanel>
+            <SidePanel  style={{borderRight: '1px solid white'}}>
                 <CentreDiv style={{ width: '100%', borderBottom: '1px solid white', marginTop:'20px' }}>
                     <HeaderText style={{ textAlign: 'center', marginTop: '10px' }}>Receiver</HeaderText>
                 </CentreDiv >
-                <HeaderText style={{ textAlign: 'center', marginTop: '40px' }}>If you are someone from Ukraine / Palestine and are in need of funds, you are able to access funds generously denoted by anonymous users arround the world.</HeaderText>
+                <HeaderText style={{ textAlign: 'center', marginTop: '40px' }}>If you are someone from Ukraine / Palestine and are in need of funds, you are able to access funds generously donated by anonymous users arround the world.</HeaderText>
                 <CentreDiv style={{ marginTop: '120px' }}>
                     <Button style={{ width: '200px', height: '200px' }} isIconOnly onClick={() => moveToPage('receive/')} color="secondary" aria-label="Like">
                         <Image style={{ marginTop: '30px' }} src={receive} alt="logo" />

@@ -23,9 +23,9 @@ export const Container = styled.div`
 `
 export const TitleName = styled.p`
   font-family: "Lucida Console", "Courier New", monospace;
-  font-size: 14px;
+  font-size: 17px;
   color: white;
-  margin-top: -2px;
+  margin-top: -12px;
 `
 
 export const Body = styled.div`
@@ -57,7 +57,6 @@ export const CentrePage = styled.div`
   display: flex;
   grid-row: 2 / -1;
   grid-column: 2;
-  border: 1px solid white;
 `;
 
 export const ConnectDiv = styled.div`
