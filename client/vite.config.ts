@@ -4,7 +4,8 @@ import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react(),
+  plugins: [
+    react(),
     nodePolyfills({
       // To add only specific polyfills, add them here. If no option is passed, adds all polyfills
       include: ['path'],
@@ -27,4 +28,7 @@ export default defineConfig({
       protocolImports: true,
     }),
   ],
+  build: {
+    target: 'esnext', // top-level await hopefully
+  },
 })
