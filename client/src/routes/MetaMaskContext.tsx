@@ -6,7 +6,6 @@ export interface IMetaMaskContext {
     metaMask: string;
     updateMetaMaskDisplay?: (value : string) => void;
     updateMetaMask?: (value : string) => void;
-
   }
   
   export const defaultState = {

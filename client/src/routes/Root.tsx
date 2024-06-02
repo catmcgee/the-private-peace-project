@@ -80,6 +80,7 @@ export default function Root() {
 
   const [connectText, setConnectText] = useState<string>("");
 
+
   const updateMetaMask = (value : string) => {
       setMetaMask(value);
   };
