@@ -11,7 +11,7 @@ async function main() {
   const amount = ethers.utils.parseEther("0.01");
   const merkleTreeHeight = 3;
 
-  const depositAndWithdraw = await deployDepositAndWithdraw(verifier.address, hasher.address, amount, merkleTreeHeight);
+  const depositAndWithdraw = await deployDepositAndWithdraw(verifier.address, palestinianVerifier.address, hasher.address, amount, merkleTreeHeight);
 }
 
 main()
