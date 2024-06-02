@@ -1,0 +1,47 @@
+{
+  "name": "the-private-peace-project",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@metamask/sdk": "^0.20.3",
+    "@nextui-org/react": "^2.4.1",
+    "@nextui-org/system": "^2.2.1",
+    "@nextui-org/theme": "^2.2.5",
+    "@xmtp/react-sdk": "^6.0.1",
+    "axios": "^1.7.2",
+    "Buffer": "^0.0.0",
+    "circomlibjs": "^0.1.7",
+    "ethers": "^5.7.0",
+    "framer-motion": "^11.2.10",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.23.1",
+    "recoil": "^0.7.7",
+    "styled-components": "^6.1.11",
+    "vite-plugin-node-polyfills": "^0.22.0",
+    "xmtp-js": "github:xmtp/xmtp-js"
+  },
+  "devDependencies": {
+    "@metamask/detect-provider": "^2.0.0",
+    "@types/circomlibjs": "^0.1.6",
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@typescript-eslint/eslint-plugin": "^7.2.0",
+    "@typescript-eslint/parser": "^7.2.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.6",
+    "tailwindcss": "^3.4.3",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0",
+    "web3modal": "^1.9.12"
+  }
+}
