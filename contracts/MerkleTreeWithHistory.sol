@@ -47,8 +47,6 @@ contract MerkleTreeWithHistory {
     bytes32 _left,
     bytes32 _right
   ) public view returns (bytes32) {
-     console.log("left", uint256(_left));
-    console.log("right", uint256(_right));
     require(uint256(_left) < FIELD_SIZE, "_left should be inside the field");
     require(uint256(_right) < FIELD_SIZE, "_right should be inside the field");
 

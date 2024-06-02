@@ -1,5 +1,6 @@
 use dep::std;
 
 fn main() {
-  assert(1+1=2);
+  // this would use dia (national ukraine identity app)
+  // unfortunately currentky no ukrainians on team so difficult to use this
 }

@@ -3918,6 +3918,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dotenv@npm:^16.4.5":
+  version: 16.4.5
+  resolution: "dotenv@npm:16.4.5"
+  checksum: 10c0/48d92870076832af0418b13acd6e5a5a3e83bb00df690d9812e94b24aff62b88ade955ac99a05501305b8dc8f1b0ee7638b18493deb6fe93d680e5220936292f
+  languageName: node
+  linkType: hard
+
 "duplexer3@npm:^0.1.4":
   version: 0.1.5
   resolution: "duplexer3@npm:0.1.5"
@@ -9387,6 +9394,7 @@ __metadata:
     circomlib: "npm:^2.0.5"
     circomlibjs: "npm:^0.1.7"
     crypto: "npm:^1.0.1"
+    dotenv: "npm:^16.4.5"
     ethers: "npm:^5.6.9"
     hardhat: "npm:^2.10.1"
     hardhat-gas-reporter: "npm:^1.0.8"

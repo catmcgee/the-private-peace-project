@@ -3,7 +3,7 @@ const { writeFileSync } = require('fs');
 // @ts-ignore -- no types
 const { mimc7Contract: mimcContract } = require('circomlibjs');
 
-const outputPath = path.join(__dirname, '../..', 'artifacts', 'contracts', 'Hasher.json');
+const outputPath = path.join(__dirname, './', 'Hasher.json');
 
 function main() {
   const contract = {

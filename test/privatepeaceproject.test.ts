@@ -13,7 +13,7 @@
 // they call withdraw() with proof along with public inputs
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { deployVerifier, deployHasher, deployDepositAndWithdraw } from "./utils/deploy";
+import { deployVerifier, deployHasher, deployDepositAndWithdraw, deployPalestineVerifier } from "./utils/deploy";
 import { Contract } from "ethers";
 import { generateHashPathInput, encrypt, decrypt, convertDecryptedProofInputs, validateProofInputs, convertProofToBytes } from "./utils/mimc";
 import { MerkleTreeMiMC } from "./utils/MerkleTree";
@@ -21,7 +21,7 @@ import { buildMimc7 as buildMimc } from 'circomlibjs';
 import { Client, Conversation } from '@xmtp/xmtp-js';
 import { generateKeyPairSync } from 'crypto';
 import { Wallet } from 'ethers';
-import { generateProof } from './utils/noir';
+import { generateProof, generatePalestineProof } from './utils/noir';
 
 function toHexString(byteArray: Uint8Array): string {
     return '0x' + Array.from(byteArray, byte => {
@@ -40,6 +40,7 @@ describe("Private Peace Project Tests", function () {
   }
 
   let verifier: Contract;
+  let palestinianVerifier: Contract;
   let hasher: Contract;
   let depositAndWithdraw: Contract;
   let accounts: any;
@@ -58,10 +59,11 @@ describe("Private Peace Project Tests", function () {
   before(async function () {
       // Deploy contracts
       verifier = await deployVerifier();
+      palestinianVerifier = await deployPalestineVerifier();
       hasher = await deployHasher();
       const amount = ethers.utils.parseEther("0.01");
       const merkleTreeHeight = 3;
-      depositAndWithdraw = await deployDepositAndWithdraw(verifier.address, hasher.address, amount, merkleTreeHeight);
+      depositAndWithdraw = await deployDepositAndWithdraw(verifier.address, palestinianVerifier.address, hasher.address, amount, merkleTreeHeight);
 
       // Get accounts
       accounts = await ethers.getSigners();
@@ -82,11 +84,17 @@ describe("Private Peace Project Tests", function () {
       recipient = ethers.BigNumber.from(accounts[0].address).toHexString();
       const noteCommitment = mimc.multiHash([recipient, ethers.BigNumber.from(secret).toHexString()]);
       const noteHex = toHexString(noteCommitment);
-      console.log("Note Hex:", noteHex);
   });
 
   it("Should add Palestine address to contract", async function () {
-      await depositAndWithdraw.connect(accounts[0]).addAddress(0, recipient); // 0 = Palestinian type
+            try {
+               proof = await generatePalestineProof({x:1});
+              console.log("Generated palestine Proof:", proof);
+          } catch (error) {
+              console.error("Failed to generate nationality proof:", error);
+          }
+
+      await depositAndWithdraw.connect(accounts[0]).addAddress(0, recipient, proof); // 0 = Palestinian type
       // TODO: Call function to get address
   });
 
@@ -95,8 +103,6 @@ describe("Private Peace Project Tests", function () {
       recipient = ethers.BigNumber.from(accounts[0].address).toHexString();
       const noteCommitment = mimc.multiHash([recipient, ethers.BigNumber.from(secret).toHexString()]);
       const noteHex = toHexString(noteCommitment);
-
-      console.log("Note Hex:", noteHex);
 
       const noteValue = ethers.BigNumber.from(noteHex).mod(ethers.BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617")).toHexString();
 
@@ -110,7 +116,6 @@ describe("Private Peace Project Tests", function () {
 
       const decodedEvent = depositAndWithdraw.interface.decodeEventLog("Deposit", event.data, event.topics);
       index = decodedEvent[1];
-      console.log("Deposit made with index:", index);
 
       expect(index).to.not.be.undefined;
   });
@@ -123,16 +128,12 @@ describe("Private Peace Project Tests", function () {
 
       const noteValue = ethers.BigNumber.from(noteHex).mod(ethers.BigNumber.from("21888242871839275222246405745257275088548364400416034343698204186575808495617")).toHexString();
 
-      console.log("Inserting noteValue into Merkle Tree:", noteValue);
-
       tree.insert(noteValue);
 
       note_root = tree.root();
-      console.log("Merkle Tree Root:", note_root);
 
       const merkleProof = tree.proof(index);
       const note_hash_path = merkleProof.pathElements;
-      console.log("Merkle Proof Path Elements:", note_hash_path);
 
       proofInputs = {
           recipient: accounts[0].address,
@@ -158,8 +159,6 @@ describe("Private Peace Project Tests", function () {
 
     // Encrypt the proof inputs with the recipient's RSA public key
     const encryptedProofInputs = encrypt(proofInputsJson, recipientPublicKeyPem);
-    console.log("Encrypted Proof Inputs:", encryptedProofInputs);
-
           // XMTP Part
     const walletA: Wallet = accounts[0]; // receiver
     const walletB: Wallet = accounts[2]; // the protocol account
@@ -186,8 +185,6 @@ describe("Private Peace Project Tests", function () {
 
     // Assuming encryptedProofInputs is a string or a Buffer
     await conversation.send(encryptedProofInputs);
-
-    console.log(`Message sent from ${walletB.address} to ${walletA.address}`);
 
     // Wait for a moment to ensure the message is sent and received
     await new Promise(resolve => setTimeout(resolve, 10000)); // Increase to 10 seconds
@@ -220,8 +217,6 @@ describe("Private Peace Project Tests", function () {
       const decryptedReceivedProofInputsJson = decrypt(lastMessage, recipientPrivateKeyPem);
       decryptedReceivedProofInputs = JSON.parse(decryptedReceivedProofInputsJson);
 
-      console.log("Decrypted Received Proof Inputs:", decryptedReceivedProofInputs);
-
       expect(decryptedReceivedProofInputs).to.deep.equal(proofInputs);
 
     });
@@ -234,26 +229,21 @@ describe("Private Peace Project Tests", function () {
     validateProofInputs(convertedProofInputs);
 
     // Log the proof inputs for debugging
-    console.log("Converted Proof Inputs:", convertedProofInputs);
-
     const mimc = await buildMimc();
 
     try {
         proof = await generateProof(convertedProofInputs);
-        console.log("Generated Proof:", proof);
     } catch (error) {
         console.error("Failed to generate proof:", error);
     }
-
-    console.log("note root", note_root)
 
     try {
 
       const tx = await depositAndWithdraw.connect(accounts[0]).withdraw(proof, "0x1018e01c1cc6a233e666507878a74520e54e6c48b4f09a76735e66bc609573ae"); // this is what is printed when you console.log note root - just weird type stuff is making this fail
       await tx.wait();
-      console.log('Transaction successful:', tx);
+      console.log('Withdraw transaction successful:', tx);
   } catch (error) {
-      console.error('Transaction failed:', error);
+      console.error('Withdraw transaction failed:', error);
   }
   });
 });

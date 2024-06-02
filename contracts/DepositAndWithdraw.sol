@@ -12,6 +12,7 @@ interface IVerifier {
 
 contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
     IVerifier public verifier;
+    IVerifier public palestinianVerifier;  
     // uint256 public denomination;
 
     // amount deposited for each commitment
@@ -32,18 +33,21 @@ contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
     /**
         @dev The constructor
         @param _verifier the address of SNARK verifier for this contract
+        @param _palestinianVerifier the address of the palestinian verifier
         @param _hasher the address of MiMC hash contract
         @param _amount transfer amount for each deposit
         @param _merkleTreeHeight the height of deposits' Merkle Tree
     */
     constructor(
         IVerifier _verifier,
+        IVerifier _palestinianVerifier,
         IHasher _hasher,
         uint256 _amount,
         uint32 _merkleTreeHeight
     ) MerkleTreeWithHistory(_merkleTreeHeight, _hasher) {
         require(_amount > 0, "denomination should be greater than 0");
         verifier = _verifier;
+        palestinianVerifier = _palestinianVerifier;  // Initialize new verifier
         amount = _amount;
     }
 
@@ -58,7 +62,6 @@ contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
         commitments[_commitment] = true;
 
         require(msg.value == amount, "Please send `mixAmount` ETH along with transaction");
-        console.log("inserted index", insertedIndex);
 
         emit Deposit(_commitment, insertedIndex, block.timestamp);
     }
@@ -98,9 +101,11 @@ contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
         emit Withdrawal(_recipient, _nullifierHash);
     }
 
-    function addAddress(bool receiverType, address receiver) external {
-        if (receiverType) {
-            palestinianAddresses.push(receiver);
+    function addAddress(bool receiverType, address receiver, bytes calldata proof) external {
+         if (receiverType) { // 0 = palestinian
+                bool verificationResult = palestinianVerifier.verify(proof);
+                require(verificationResult, "National verification failed");
+                palestinianAddresses.push(receiver);
         } else {
             ukrainianAddresses.push(receiver);
         }
@@ -122,8 +127,8 @@ contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
         }
     }
 
-// this is very bad and gas inefficient
-     function deleteAddress(address _address) public {
+    // this is very bad and gas inefficient
+    function deleteAddress(address _address) public {
         bool found = false;
 
         for (uint i = 0; i < palestinianAddresses.length; i++) {
@@ -149,4 +154,3 @@ contract DepositAndWithdraw is MerkleTreeWithHistory, ReentrancyGuard {
         }
     }
 }
-

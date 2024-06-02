@@ -1,4 +1,5 @@
 import circuit from '../../circuits/mimc_tree/target/mimc_tree.json';
+import circuit2 from '../../circuits/palestinian/target/palestinian.json'
 import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
 
@@ -17,6 +18,20 @@ export async function generateProof(proofInputs: ProofInputs): Promise<Proof> {
         const noir = new Noir(circuit as any, backend as any);
 
         const proof = await noir.generateProof(proofInputs);
+
+        return proof;
+    } catch (error) {
+        console.error("Failed to generate proof:", error);
+        throw error;
+    }
+}
+
+export async function generatePalestineProof(proofInputs: ProofInputs): Promise<Proof> {
+    try {
+        const backend = new BarretenbergBackend(circuit2 as any);
+        const noir = new Noir(circuit2 as any, backend as any);
+
+        const proof = await noir.generateProof({x:2});
 
         return proof;
     } catch (error) {
